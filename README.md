@@ -1,1 +1,1 @@
-# FinitaryFunctors
+# Finitary Functors
