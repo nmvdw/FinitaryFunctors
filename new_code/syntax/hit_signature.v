@@ -16,6 +16,11 @@ Require Import UniMath.CategoryTheory.limits.bincoproducts.
 Require Import UniMath.CategoryTheory.DisplayedCats.Core.
 Require Import UniMath.CategoryTheory.DisplayedCats.Constructions.
 
+Require Import prelude.
+Require Import syntax.containers.
+Require Import syntax.W_types.
+Require Import algebra.set_algebra.
+
 (*
 Local Open Scope cat.
 
@@ -987,6 +992,9 @@ Definition is_finitary_hit
   := is_finitary (point_constr Σ) × is_finitary (pr12 Σ).
 
 (* Algebras *)
+Local Open Scope cat.
+Local Open Scope container_scope.
+
 Definition fun_algebra_disp_cat
            {C : category}
            (F : C ⟶ C)
@@ -1016,7 +1024,6 @@ Proof.
        rewrite functor_comp ;
        apply idpath).
 Defined.
-
 
 Definition sem_endpoint
            {Σ : hit_signature}

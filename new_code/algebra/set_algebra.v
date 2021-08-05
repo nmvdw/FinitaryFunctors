@@ -11,6 +11,98 @@ Require Import UniMath.CategoryTheory.limits.bincoproducts.
 Require Import prelude.
 Require Import syntax.containers.
 
+Local Open Scope container_scope.
+Local Open Scope set.
+Local Open Scope cat.
+
+Definition interpret_container
+           (C : container)
+           (X : hSet)
+  : hSet
+  := ∑ (s : shapes C), funset (positions C s) X.
+
+Notation "⟦ C ⟧ X" := (interpret_container C X) (at level 70) : container_scope. (** \[[ and \]] *)
+
+(** Relevant builders *)
+Definition shape_of
+           {C : container}
+           {X : hSet}
+           (x : ⟦ C ⟧ X)
+  : shapes C
+  := pr1 x.
+
+Definition position_of
+           {C : container}
+           {X : hSet}
+           (x : ⟦ C ⟧ X)
+  : positions C (shape_of x) → X
+  := pr2 x.
+
+Definition cpair
+           {C : container}
+           {X : hSet}
+           (s : shapes C)
+           (f : positions C s → X)
+  : ⟦ C ⟧ X
+  := s ,, f.
+
+(** The action on maps and the functor laws *)
+Definition interpret_container_map
+           (C : container)
+           {X Y : hSet}
+           (f : X → Y)
+  : ⟦ C ⟧ X → ⟦ C ⟧ Y
+  := λ x, cpair (shape_of x) (λ p, f (position_of x p)).
+
+Definition interpret_container_map_id
+           (C : container)
+           (X : hSet)
+  : interpret_container_map C (idfun X) = idfun _.
+Proof.
+  apply idpath.
+Qed.
+
+Definition interpret_container_map_comp
+           (C : container)
+           {X Y Z : hSet}
+           (f : X → Y)
+           (g : Y → Z)
+  : (interpret_container_map C (g ∘ f)
+     =
+     interpret_container_map C g ∘ interpret_container_map C f)%functions.
+Proof.
+  apply idpath.
+Qed.
+
+Definition container_to_functor_data
+           (C : container)
+  : functor_data HSET HSET.
+Proof.
+  use make_functor_data.
+  - exact (λ Z, ⟦ C ⟧ Z).
+  - exact (@interpret_container_map C).
+Defined.
+
+Definition container_is_functor
+           (C : container)
+  : is_functor (container_to_functor_data C).
+Proof.
+  split.
+  - intros X.
+    apply interpret_container_map_id.
+  - intros X Y Z f g.
+    apply interpret_container_map_comp.
+Qed.
+
+Definition container_to_functor
+           (C : container)
+  : SET ⟶ SET.
+Proof.
+  use make_functor.
+  - exact (container_to_functor_data C).
+  - exact (container_is_functor C).
+Defined.
+
 (** The interpretations of the standard containers correspond with what's expected *)
 Definition interpret_const_to_const
            {A : hSet}

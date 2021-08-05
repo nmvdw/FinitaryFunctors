@@ -11,6 +11,8 @@ Require Import UniMath.CategoryTheory.limits.bincoproducts.
 Require Import prelude.
 Require Import syntax.containers.
 
+Local Open Scope cat.
+
 (** W-types with variables *)
 (*
 terms, tm 
