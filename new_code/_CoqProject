@@ -1,3 +1,7 @@
 COQC = coqc COQDEP = coqdep
 -R . "sem"
 prelude.v
+syntax/containers.v
+syntax/W_types.v
+syntax/hit_signature.v
+algebra/set_algebra.v
