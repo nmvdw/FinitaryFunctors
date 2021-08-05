@@ -54,26 +54,6 @@ Definition interpret_container_map
   : ⟦ C ⟧ X → ⟦ C ⟧ Y
   := λ x, cpair (shape_of x) (λ p, f (position_of x p)).
 
-Definition interpret_container_map_id
-           (C : container)
-           (X : hSet)
-  : interpret_container_map C (idfun X) = idfun _.
-Proof.
-  apply idpath.
-Qed.
-
-Definition interpret_container_map_comp
-           (C : container)
-           {X Y Z : hSet}
-           (f : X → Y)
-           (g : Y → Z)
-  : (interpret_container_map C (g ∘ f)
-     =
-     interpret_container_map C g ∘ interpret_container_map C f)%functions.
-Proof.
-  apply idpath.
-Qed.
-
 Definition container_to_functor_data
            (C : container)
   : functor_data HSET HSET.
@@ -89,9 +69,9 @@ Definition container_is_functor
 Proof.
   split.
   - intros X.
-    apply interpret_container_map_id.
+    apply idpath.
   - intros X Y Z f g.
-    apply interpret_container_map_comp.
+    apply idpath.
 Qed.
 
 Definition container_to_functor
