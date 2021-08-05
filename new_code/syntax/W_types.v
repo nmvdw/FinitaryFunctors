@@ -215,10 +215,10 @@ Definition W_on_id
   : W_on_mor C (idfun X) = idfun _.
 Proof.
   use funextsec.
-  intro x ; cbn.
-  induction x as [ x | s φs IHφs ] ; simpl.
+  intro x.
+  induction x as [ x | s φs IHφs ].
   - apply idpath.
-  - apply maponpaths.
+  - refine (maponpaths (sup s) _). 
     use funextsec.
     intro.
     apply IHφs.
@@ -234,10 +234,10 @@ Definition W_on_comp
      W_on_mor C g ∘ W_on_mor C f)%functions.
 Proof.
   use funextsec.
-  intro x ; cbn.
-  induction x as [ x | s φs IHφs ] ; simpl.
+  intro x.
+  induction x as [ x | s φs IHφs ].
   - apply idpath.
-  - apply maponpaths.
+  - refine (maponpaths (sup s) _).
     use funextsec.
     intro.
     apply IHφs.
