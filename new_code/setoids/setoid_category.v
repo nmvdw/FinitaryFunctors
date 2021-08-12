@@ -1,0 +1,540 @@
+(**
+Here we define the category of setoids.
+The objects are setoids and the morphisms are setoid mophisms.
+We also show it has sums, products, and exponentials.
+We end by showing that the quotient from setoids to set is a left adjoint.
+ *)
+Require Import UniMath.Foundations.All.
+Require Import UniMath.MoreFoundations.All.
+Require Import UniMath.Combinatorics.FiniteSets.
+Require Import UniMath.CategoryTheory.Core.Categories.
+Require Import UniMath.CategoryTheory.Core.Isos.
+Require Import UniMath.CategoryTheory.Core.Functors.
+Require Import UniMath.CategoryTheory.Core.NaturalTransformations.
+Require Import UniMath.CategoryTheory.categories.HSET.All.
+Require Import UniMath.CategoryTheory.limits.binproducts.
+Require Import UniMath.CategoryTheory.limits.bincoproducts.
+Require Import UniMath.CategoryTheory.DisplayedCats.Core.
+Require Import UniMath.CategoryTheory.DisplayedCats.Constructions.
+Require Export UniMath.CategoryTheory.exponentials.
+Require Export UniMath.CategoryTheory.Adjunctions.Core.
+
+Require Import setoids.base.
+
+Open Scope cat.
+
+(** The category of setoids *)
+Definition setoid_cat_ob_mor
+  : precategory_ob_mor.
+Proof.
+  use make_precategory_ob_mor. 
+  - exact setoid.
+  - exact setoid_morphism.
+Defined.
+
+Definition id_setoid_morphism (X : setoid)
+  : setoid_morphism X X.
+Proof.
+  use make_setoid_morphism.
+  - exact (idfun X).
+  - exact (λ x y, idfun (x ≡ y)).
+Defined.
+
+Definition comp_setoid_morphism
+           {X₁ X₂ X₃ : setoid}
+           (f₁ : setoid_morphism X₁ X₂)
+           (f₂ : setoid_morphism X₂ X₃)
+  : setoid_morphism X₁ X₃.
+Proof.
+  use make_setoid_morphism.
+  - exact (λ z, f₂(f₁ z)).
+  - exact (λ x y p, map_eq f₂(map_eq f₁ p)).
+Defined.
+
+Definition setoid_cat_data
+  : precategory_data.
+Proof.
+  use make_precategory_data.
+  - exact setoid_cat_ob_mor.
+  - exact id_setoid_morphism.
+  - exact @comp_setoid_morphism.
+Defined.
+
+Definition setoid_precat
+  : precategory.
+Proof.
+  use make_precategory.
+  - exact setoid_cat_data.
+  - repeat (use tpair) ; cbn.
+    + reflexivity.
+    + reflexivity.
+    + reflexivity.
+    + reflexivity.
+Defined.
+
+Definition setoid_cat
+  : category.
+Proof.
+  use make_category.
+  - exact setoid_precat.
+  - intros X₁ X₂ ; cbn.
+    apply isaset_setoid_morphism.
+Defined.
+
+(** Sums in the category of setoids *)
+Definition sum_rel
+           {X Y : hSet}
+           (R₁ : eqrel X)
+           (R₂ : eqrel Y)
+  : eqrel (setcoprod X Y)%set.
+Proof.
+  use make_eq_rel.
+  - intros s₁ s₂.
+    destruct s₁ as [x₁ | y₁], s₂ as [x₂ | y₂].
+    + exact (R₁ x₁ x₂).
+    + exact hfalse.
+    + exact hfalse.
+    + exact (R₂ y₁ y₂).
+  - intros s.
+    destruct s as [x | y].
+    + exact (id x)%setoid.
+    + exact (id y)%setoid.
+  - intros s₁ s₂.
+    destruct s₁ as [x₁ | y₁], s₂ as [x₂ | y₂].
+    + exact (λ p , ! p)%setoid.
+    + exact (idfun _).
+    + exact (idfun _).
+    + exact (λ p , ! p)%setoid.
+  - intros s₁ s₂ s₃.
+    destruct s₁ as [x₁ | y₁], s₂ as [x₂ | y₂].
+    + destruct s₃ as [x₃ | y₃].
+      * exact (λ p q , p @ q)%setoid.
+      * exact (λ _, fromempty).
+    + exact fromempty.
+    + exact fromempty.
+    + destruct s₃ as [x₃ | y₃].
+      * exact (λ _, fromempty).
+      * exact (λ p q , p @ q)%setoid.
+Defined.
+
+Definition sum_setoid (X Y : setoid_cat)
+  : setoid_cat
+  := make_setoid (sum_rel (carrier_eq X) (carrier_eq Y)).
+
+Definition setoid_inl
+           (X₁ X₂ : setoid_cat)
+  : X₁ --> sum_setoid X₁ X₂.
+Proof.
+  use make_setoid_morphism.
+  - exact (λ x, inl x).
+  - exact (λ _ _ p, p).
+Defined.
+
+Definition setoid_inr
+           (X₁ X₂ : setoid_cat)
+  : X₂ --> sum_setoid X₁ X₂.
+Proof.
+  use make_setoid_morphism.
+  - exact (λ x, inr x).
+  - exact (λ _ _ p, p).
+Defined.
+
+Definition setoid_plus
+           {X₁ X₂ Y : setoid_cat}
+           (f : X₁ --> Y)
+           (g : X₂ --> Y)
+  : sum_setoid X₁ X₂ --> Y.
+Proof.
+  unshelve esplit.
+  - intro z.
+    destruct z as [x | x] ; cbn in *.
+    + exact (f x).
+    + exact (g x).
+  - intros z₁ z₂ p.
+    destruct z₁ as [x₁ | x₁ ], z₂ as [x₂ | x₂].
+    + exact (map_eq f p).
+    + exact (fromempty p).
+    + exact (fromempty p).
+    + exact (map_eq g p).
+Defined.
+
+Definition sum_setoid_is_bincoproduct
+           (X₁ X₂ : setoid_cat)
+  : isBinCoproduct
+      setoid_cat X₁ X₂
+      (sum_setoid X₁ X₂) (setoid_inl X₁ X₂) (setoid_inr X₁ X₂).
+Proof.
+  intros Y f g ; cbn.
+  use tpair.
+  - use tpair.
+    + exact (setoid_plus f g).
+    + split ; reflexivity.
+  - intros h.
+    use subtypePath.
+    + intro.
+      apply isapropdirprod ; apply setoid_cat.
+    + use setoid_morphism_eq ; cbn.
+      intro z.
+      destruct z as [x | x].
+      * induction (pr12 h).
+        reflexivity.
+      * induction (pr22 h).
+        reflexivity.
+Defined.
+
+Definition setoid_cat_bincoproducts
+  : BinCoproducts setoid_cat.
+Proof.
+  intros X₁ X₂.
+  use tpair.
+  - exact (sum_setoid X₁ X₂ ,, setoid_inl X₁ X₂ ,, setoid_inr X₁ X₂).
+  - exact (sum_setoid_is_bincoproduct X₁ X₂).
+Defined.
+
+(** The category of setoids has binary products *)
+Definition prod_rel
+           {X Y : hSet}
+           (R₁ : eqrel X)
+           (R₂ : eqrel Y)
+  : eqrel (X × Y)%set.
+Proof.
+  use make_eq_rel.
+  - exact (λ z₁ z₂, (hconj (R₁ (pr1 z₁) (pr1 z₂)) (R₂ (pr2 z₁) (pr2 z₂)))).
+  - exact (λ z, (id (pr1 z) ,, id (pr2 z)))%setoid.
+  - exact (λ _ _ p, (! (pr1 p) ,, ! (pr2 p)))%setoid.
+  - exact (λ _ _ _ p q, ((pr1 p @ pr1 q) ,, (pr2 p @ pr2 q)))%setoid.
+Defined.
+
+Definition prod_setoid (X Y : setoid_cat)
+  : setoid_cat
+  := make_setoid (prod_rel (carrier_eq X) (carrier_eq Y)).
+
+Definition setoid_pr1
+           (X₁ X₂ : setoid_cat)
+  : prod_setoid X₁ X₂ --> X₁.
+Proof.
+  use make_setoid_morphism.
+  - exact (λ z ,  pr1 z).
+  - exact (λ _ _, pr1).
+Defined.
+
+Definition setoid_pr2
+           (X₁ X₂ : setoid_cat)
+  : prod_setoid X₁ X₂ --> X₂.
+Proof.
+  use make_setoid_morphism.
+  - exact (λ z ,  pr2 z).
+  - exact (λ _ _, pr2).
+Defined.
+
+Definition setoid_pair
+           {X₁ X₂ Y : setoid_cat}
+           (f : Y --> X₁)
+           (g : Y --> X₂)
+  : Y --> prod_setoid X₁ X₂.
+Proof.
+  use make_setoid_morphism ; cbn in *.
+  - exact (λ y, (f y ,, g y)).
+  - exact (λ _ _ p, (map_eq f p ,, map_eq g p)).
+Defined.
+
+Definition prod_setoid_is_binproduct
+           (X₁ X₂ : setoid_cat)
+  : isBinProduct
+      setoid_cat X₁ X₂
+      (prod_setoid X₁ X₂) (setoid_pr1 X₁ X₂) (setoid_pr2 X₁ X₂).
+Proof.
+  intros Y f g ; cbn.
+  use tpair.
+  - use tpair.
+    + exact (setoid_pair f g).
+    + split ; reflexivity.
+  - intros h.
+    use subtypePath.
+    + intro.
+      apply isapropdirprod ; apply setoid_cat.
+    + use setoid_morphism_eq ; cbn.
+      intro z.
+      use dirprod_paths.
+      * induction (pr12 h).
+        reflexivity.
+      * induction (pr22 h).
+        reflexivity.
+Defined.
+
+Definition setoid_cat_binproducts
+  : BinProducts setoid_cat.
+Proof.
+  intros X₁ X₂.
+  use tpair.
+  - exact (prod_setoid X₁ X₂ ,, setoid_pr1 X₁ X₂ ,, setoid_pr2 X₁ X₂).
+  - exact (prod_setoid_is_binproduct X₁ X₂).
+Defined.
+
+(** Exponentials of setoids *)
+Definition setoid_morphism_hSet (X₁ X₂ : setoid)
+  : hSet.
+Proof.
+  use make_hSet.
+  - exact (setoid_morphism X₁ X₂).
+  - apply isaset_setoid_morphism.
+Defined.
+
+Definition fun_rel
+           (X₁ X₂ : setoid)
+  : eqrel (setoid_morphism_hSet X₁ X₂).
+Proof.
+  use make_eq_rel.
+  - intros f g ; cbn in *.
+    exact (∀ (x : X₁), f x ≡ g x).
+  - exact (λ f x, id _ _)%setoid.
+  - exact (λ f g p x, ! (p x))%setoid.
+  - exact (λ f g h p₁ p₂ x, p₁ x @ p₂ x)%setoid.
+Defined.
+
+Definition setoid_exp
+           (X₁ X₂ : setoid_cat)
+  : setoid_cat
+  := make_setoid (fun_rel X₁ X₂).
+
+Definition setoid_exp_functor_data
+           (X : setoid)
+  : functor_data setoid_cat setoid_cat.
+Proof.
+  use make_functor_data.
+  - exact (setoid_exp X).
+  - intros Y₁ Y₂ f ; cbn in *.
+    use make_setoid_morphism ; cbn.
+    + exact (λ g, comp_setoid_morphism g f).
+    + exact (λ g₁ g₂ p x, map_eq f (p x)).
+Defined.
+
+Definition setoid_exp_functor
+           (X : setoid)
+  : setoid_cat ⟶ setoid_cat.
+Proof.
+  use make_functor.
+  - exact (setoid_exp_functor_data X).
+  - split.
+    + intros Y.
+      use setoid_morphism_eq.
+      reflexivity.
+    + intros Y₁ Y₂ Y₃ f₁ f₂.
+      use setoid_morphism_eq.
+      reflexivity.
+Defined.
+
+Definition setoid_exp_unit
+           (X : setoid)
+  : (functor_identity setoid_precat)
+      ⟹
+      constprod_functor1 setoid_cat_binproducts X ∙ setoid_exp_functor X.
+Proof.
+  use make_nat_trans.
+  - intros Y.
+    use make_setoid_morphism.
+    + intros y.
+      use make_setoid_morphism.
+      * exact (λ x, x ,, y).
+      * exact (λ x₁ x₂ p , p ,, id _ _)%setoid.
+    + exact (λ y₁ y₂ p x , id _ _ ,, p)%setoid.
+  - intros Y₁ Y₂ f.
+    abstract (
+        use setoid_morphism_eq ;
+        intro y ;
+        use setoid_morphism_eq ;
+        reflexivity).
+Defined.
+
+Definition setoid_exp_counit
+           (X : setoid)
+  : (setoid_exp_functor X ∙ constprod_functor1 setoid_cat_binproducts X)
+      ⟹
+      functor_identity setoid_precat.
+Proof.
+  use make_nat_trans.
+  - intros Y.
+    use make_setoid_morphism.
+    + intro z ; cbn in *.
+      exact (pr2 z (pr1 z)).
+    + intros z₁ z₂ p ; cbn in *.
+      exact (map_eq (pr2 z₁) (pr1 p) @ pr2 p (pr1 z₂))%setoid.
+  - intros Y₁ Y₂ f.
+    use setoid_morphism_eq.
+    reflexivity.
+Defined.
+
+Definition setoid_cat_has_exponentials
+  : Exponentials setoid_cat_binproducts.
+Proof.
+  intro X.
+  use tpair.
+  - exact (setoid_exp_functor X).
+  - use make_are_adjoints.
+    + exact (setoid_exp_unit X).
+    + exact (setoid_exp_counit X).
+    + split.
+      * abstract(
+            intros Y ;
+            use setoid_morphism_eq ;
+            reflexivity).
+      * abstract
+          (intros Y ;
+           use setoid_morphism_eq ;
+           intro ;
+           use setoid_morphism_eq ;
+           reflexivity).
+Defined.
+
+(** Functor from set to setoid *)
+Definition path_rel
+           (X : hSet)
+  : eqrel X
+  := make_eq_rel
+       (λ x y, eqset x y)
+       idpath
+       (λ _ _ p, ! p)
+       (λ _ _ _ p q, p @ q).
+
+Definition path_setoid_data : functor_data SET setoid_cat.
+Proof.
+  use make_functor_data.
+  - exact (λ X, make_setoid (path_rel X)).
+  - intros X Y f.
+    use make_setoid_morphism.
+    + exact f.
+    + exact (λ x y p, maponpaths f p).
+Defined.
+      
+Definition path_setoid : SET ⟶ setoid_cat.
+Proof.
+  use make_functor.
+  - exact path_setoid_data.
+  - split.
+    + intros X ; cbn.
+      use setoid_morphism_eq.
+      reflexivity.
+    + intros X Y Z f g ; cbn.
+      use setoid_morphism_eq.
+      reflexivity.
+Defined.
+
+(** Functor fom setoid to set *)
+Definition quotient_setoid_ob
+           (X : setoid)
+  : hSet.
+Proof.
+  use setquotinset.
+  - exact X.
+  - exact (carrier_eq X).
+Defined.
+
+Definition quotient_setoid_mor
+           {X₁ X₂ : setoid}
+           (f : setoid_morphism X₁ X₂)
+  : quotient_setoid_ob X₁ → quotient_setoid_ob X₂.
+Proof.
+  use setquotuniv ; cbn.
+  - exact (λ x, setquotpr _ (f x)).
+  - exact (λ x y p, iscompsetquotpr _ (f x) (f y) (map_eq f p)).
+Defined.
+
+Definition quotient
+  : setoid_cat ⟶ SET.
+Proof.
+  use make_functor.
+  - use make_functor_data.
+    + exact quotient_setoid_ob.
+    + exact @quotient_setoid_mor.
+  - split.
+    + intros X ; cbn.
+      use funextsec ; intro x.
+      use (setquotunivprop' (λ z, _ z = z)).
+      * intro.
+        apply isasetsetquot.
+      * intro y ; cbn.
+        reflexivity.
+    + intros X Y Z f g ; cbn.
+      use funextsec ; intro x.
+      use (setquotunivprop' (λ z, _ z = quotient_setoid_mor g (quotient_setoid_mor f z))).
+      * intro.
+        apply isasetsetquot.
+      * intro y ; cbn.
+        reflexivity.
+Defined.
+
+Definition quotient_unit
+  : functor_identity setoid_cat ⟹ quotient ∙ path_setoid.
+Proof.
+  use make_nat_trans.
+  - intro X ; cbn.
+    use make_setoid_morphism.
+    + exact (setquotpr _).
+    + exact (iscompsetquotpr _).
+  - abstract
+      (intros X Y f ; cbn ;
+       use setoid_morphism_eq ;
+       intro x ;
+       reflexivity).
+Defined.
+
+Definition quotient_counit
+  : path_setoid ∙ quotient ⟹ functor_identity SET.
+Proof.
+  use make_nat_trans.
+  - intro X ; cbn.
+    use setquotuniv.
+    + exact (idfun _).
+    + exact (λ x y p, p).
+  - abstract
+      (intros X Y f ;
+       use funextsec ;
+       intro x ;
+       revert x ;
+       use setquotunivprop' ;
+       [ intro ; apply Y | reflexivity ]).
+Defined.
+
+Definition quotient_counit_is_inverse
+           (X : SET)
+  : is_inverse_in_precat (quotient_counit X) (setquotpr (carrier_eq (path_setoid X))).
+Proof.
+  split.
+  - use funextsec.
+    use setquotunivprop'.
+    { intro. apply isasetsetquot. }
+    reflexivity.
+  - use funextsec.
+    intro.
+    reflexivity.
+Qed.
+
+Definition quotient_counit_is_nat_iso
+  : is_nat_iso quotient_counit.
+Proof.
+  intros X.
+  use is_iso_qinv.
+  - exact (setquotpr _).
+  - exact (quotient_counit_is_inverse X).
+Defined.
+
+(** The quotient is a left adjoint *)
+Definition quotient_adjunction
+  : are_adjoints quotient path_setoid.
+Proof.
+  use make_are_adjoints.
+  - exact quotient_unit.
+  - exact quotient_counit.
+  - split.
+    + abstract
+        (intro X ;
+         use funextsec ;
+         intro x ; revert x ; cbn ;
+         use setquotunivprop' ;
+         [ intro ; apply isasetsetquot | reflexivity ]).
+    + abstract
+        (intro X ;
+         use setoid_morphism_eq ;
+         intro x ; cbn in * ;
+         reflexivity).
+Defined.

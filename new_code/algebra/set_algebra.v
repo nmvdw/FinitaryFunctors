@@ -8,8 +8,13 @@ Require Import UniMath.CategoryTheory.Core.NaturalTransformations.
 Require Import UniMath.CategoryTheory.categories.HSET.All.
 Require Import UniMath.CategoryTheory.limits.binproducts.
 Require Import UniMath.CategoryTheory.limits.bincoproducts.
+Require Import UniMath.CategoryTheory.DisplayedCats.Core.
+Require Import UniMath.CategoryTheory.DisplayedCats.Constructions.
+
 Require Import prelude.
 Require Import syntax.containers.
+Require Import syntax.hit_signature.
+Require Import syntax.W_types.
 
 Local Open Scope container_scope.
 Local Open Scope set.
@@ -504,3 +509,69 @@ Proof.
              (funset A (⟦ C ⟧ X))
              (interpret_exp X)).
 Defined.
+
+Definition fun_algebra_disp_cat
+           {C : category}
+           (F : C ⟶ C)
+  : disp_cat C.
+Proof.
+  use disp_struct.
+  - exact (λ x, F x --> x).
+  - exact (λ x y hx hy f, hx · f = #F f · hy).
+  - abstract
+      (simpl ;
+       intros ; 
+       apply C).
+  - abstract
+      (simpl ;
+       intros ;
+       rewrite functor_id, id_left, id_right ;
+       apply idpath).
+  - abstract
+      (simpl ;
+       intros ? ? ? ? ? ? ? ? p q ;
+       rewrite assoc ;
+       rewrite p ;
+       rewrite assoc' ;
+       rewrite q ;
+       rewrite assoc ;
+       apply maponpaths_2 ;
+       rewrite functor_comp ;
+       apply idpath).
+Defined.
+
+Definition sem_endpoint
+           {Σ : hit_signature}
+           {X : hSet}
+           (c : ⟦ point_constr Σ ⟧ X → X)
+           (i : path_index Σ)
+           (var : path_arg Σ i → X)
+           (x : W (point_constr Σ) (path_arg Σ i))
+  : X.
+Proof.
+  induction x as [ v | s p IHp ].
+  - exact (var v).
+  - exact (c (s ,, IHp)).
+Defined.
+
+Definition hit_algebra_disp_cat
+           (Σ : hit_signature)
+  : disp_cat
+      (total_category
+         (fun_algebra_disp_cat
+            (container_to_functor (point_constr Σ)))).
+Proof.
+  use disp_full_sub.
+  intros X.
+  induction X as [X c] ; simpl in *.
+  exact (∏ (i : path_index Σ)
+           (p : path_arg Σ i → X),
+         sem_endpoint c i p (path_lhs Σ i)
+         =
+         sem_endpoint c i p (path_rhs Σ i))%type.
+Defined.
+
+Definition hit_algebra
+           (Σ : hit_signature)
+  : category
+  := total_category (hit_algebra_disp_cat Σ).

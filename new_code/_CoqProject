@@ -4,4 +4,12 @@ prelude.v
 syntax/containers.v
 syntax/W_types.v
 syntax/hit_signature.v
+
+setoids/base.v
+setoids/setoid_category.v
+
 algebra/set_algebra.v
+algebra/setoid_algebra.v
+
+examples/natural_numbers.v
+examples/mod2.v
