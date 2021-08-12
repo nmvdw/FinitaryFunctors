@@ -18,6 +18,8 @@ Require Import syntax.W_types.
 Require Import setoids.base.
 Require Import setoids.setoid_category.
 
+Require Import algebra.set_algebra.
+
 Local Open Scope container_scope.
 Local Open Scope cat.
 
@@ -195,6 +197,23 @@ Definition cpair_setoid
   : ⦃ C ⦄ X
   := s ,, f.
 
+
+Definition container_to_setoid
+           {C : container}
+           {X : setoid}
+           (z : ⟦ C ⟧ (pr1 X))
+  : ⦃ C ⦄ X.
+Proof.
+  simple refine (pr1 z ,, _) ; simpl.
+  use make_setoid_morphism.
+  - exact (pr2 z).
+  - abstract
+      (simpl ;
+       intros ? ? p ;
+       induction p ;
+       apply (id _)%setoid).
+Defined.
+
 Definition sem_endpoint_setoid
            {Σ : hit_signature}
            {X : setoid}
@@ -202,8 +221,31 @@ Definition sem_endpoint_setoid
            (i : path_index Σ)
            (var : path_arg Σ i → X)
            (x : W (point_constr Σ) (path_arg Σ i))
-  : X.
+  : X
+  := sem_endpoint (λ z, pr1 c (container_to_setoid z)) i var x.
+(*
 Proof.
+  refine ().
+  intro z.
+  refine (pr1 c (container_to_setoid z)).
+  apply lol.
+  exact z.
+  simpl in z ; simpl.
+  simple refine (_ ,, _).
+  - exact (pr1 z).
+  - simpl.
+    use make_setoid_morphism.
+    + exact (pr2 z).
+    + abstract
+        (simpl ;
+         intros ? ? p ;
+         induction p ;
+         apply (id _)%setoid).
+  (*
+si      mpl.
+  pose (pr1 c).
+  cbn in p.
+  exact (pr1 c).
   induction x as [ v | s p IHp ].
   - exact (var v).
   - simple refine (c (s ,, _)).
@@ -212,7 +254,9 @@ Proof.
     + intros x y q.
       induction q.
       exact (id _)%setoid.
+   *)
 Defined.
+*)
 
 Definition hit_setoid_prealgebra
            (Σ : hit_signature)
@@ -243,6 +287,46 @@ Definition make_hit_setoid_prealgebra
 Proof.
   refine (X ,, _) ; cbn.
   exact f.
+Defined.
+
+Section AccessorsMor.
+  Context {Σ : hit_signature}
+          {X Y : hit_setoid_prealgebra Σ}
+          (f : X --> Y).
+
+  Definition alg_map_carrier_setoid
+    : setoid_morphism
+        (alg_carrier_setoid X)
+        (alg_carrier_setoid Y)
+    := pr1 f.
+
+  Definition alg_map_commute_setoid
+             (x : ⦃ point_constr Σ ⦄ (alg_carrier_setoid X))
+    : alg_map_carrier_setoid (algebra_map_setoid X x)
+      =
+      algebra_map_setoid Y (interpret_container_setoid_morphism (point_constr Σ) (pr1 f) x).
+  Proof.
+    exact (maponpaths (λ h, pr1 h x) (pr2 f)).
+  Qed.
+End AccessorsMor.
+
+Definition make_hit_setoid_prealgebra_mor
+           {Σ : hit_signature}
+           {X Y : hit_setoid_prealgebra Σ}
+           (f : setoid_morphism (alg_carrier_setoid X) (alg_carrier_setoid Y))
+           (p : ∏ (x : ⦃ point_constr Σ ⦄ (alg_carrier_setoid X)),
+                f (algebra_map_setoid X x)
+                =
+                algebra_map_setoid
+                  Y
+                  (interpret_container_setoid_morphism (point_constr Σ) f x))
+  : X --> Y.
+Proof.
+  simple refine (f ,, _) ; simpl.
+  abstract
+    (use setoid_morphism_eq ;
+     intro x ;
+     exact (p x)).
 Defined.
 
 Definition is_hit_setoid_algebra
