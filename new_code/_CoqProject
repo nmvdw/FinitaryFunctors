@@ -11,5 +11,7 @@ setoids/setoid_category.v
 algebra/set_algebra.v
 algebra/setoid_algebra.v
 
+adjunctions/adjunction_constructions.v
+
 examples/natural_numbers.v
 examples/mod2.v

@@ -15,7 +15,6 @@ Require Import prelude.
 Require Import syntax.containers.
 Require Import syntax.hit_signature.
 Require Import syntax.W_types.
-Require Import algebra.set_algebra.
 Require Import setoids.base.
 Require Import setoids.setoid_category.
 
@@ -235,4 +234,4 @@ Defined.
 Definition hit_algebra_setoid
            (Σ : hit_signature)
   : category
-  := total_category (hit_algebra_disp_cat Σ).
+  := total_category (hit_algebra_setoid_disp_cat Σ).

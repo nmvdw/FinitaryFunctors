@@ -16,8 +16,8 @@ Require Import UniMath.CategoryTheory.limits.binproducts.
 Require Import UniMath.CategoryTheory.limits.bincoproducts.
 Require Import UniMath.CategoryTheory.DisplayedCats.Core.
 Require Import UniMath.CategoryTheory.DisplayedCats.Constructions.
-Require Export UniMath.CategoryTheory.exponentials.
-Require Export UniMath.CategoryTheory.Adjunctions.Core.
+Require Import UniMath.CategoryTheory.exponentials.
+Require Import UniMath.CategoryTheory.Adjunctions.Core.
 
 Require Import setoids.base.
 
