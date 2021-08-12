@@ -11,6 +11,7 @@ Require Import UniMath.CategoryTheory.Core.Categories.
 Require Import UniMath.CategoryTheory.Core.Isos.
 Require Import UniMath.CategoryTheory.Core.Functors.
 Require Import UniMath.CategoryTheory.Core.NaturalTransformations.
+Require Import UniMath.CategoryTheory.DisplayedCats.Equivalences.
 Require Import UniMath.CategoryTheory.categories.HSET.All.
 Require Import UniMath.CategoryTheory.limits.binproducts.
 Require Import UniMath.CategoryTheory.limits.bincoproducts.
@@ -520,9 +521,9 @@ Defined.
 
 (** The quotient is a left adjoint *)
 Definition quotient_adjunction
-  : are_adjoints quotient path_setoid.
+  : adjunction setoid_cat SET.
 Proof.
-  use make_are_adjoints.
+  simple refine ((quotient ,, (path_setoid ,, (_ ,, _))) ,, _).
   - exact quotient_unit.
   - exact quotient_counit.
   - split.

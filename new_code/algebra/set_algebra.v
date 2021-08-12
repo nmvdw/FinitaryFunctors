@@ -26,7 +26,8 @@ Definition interpret_container
   : hSet
   := ∑ (s : shapes C), funset (positions C s) X.
 
-Notation "⟦ C ⟧ X" := (interpret_container C X) (at level 70) : container_scope. (** \[[ and \]] *)
+Notation "⟦ C ⟧ X" := (interpret_container C X) (at level 70) : container_scope.
+(** \[[ and \]] *)
 
 (** Relevant builders *)
 Definition shape_of
@@ -524,22 +525,48 @@ Proof.
   - exact (c (s ,, IHp)).
 Defined.
 
+Close Scope set.
+
+Definition hit_prealgebra
+           (Σ : hit_signature)
+  : category
+  := total_category
+       (fun_algebra_disp_cat
+          (container_to_functor (point_constr Σ))).
+
+Section Accessors.
+  Context {Σ : hit_signature}
+          (X : hit_prealgebra Σ).
+
+  Definition alg_carrier : hSet
+    := pr1 X.
+
+  Definition algebra_map
+    : ⟦ point_constr Σ ⟧ alg_carrier → alg_carrier
+    := pr2 X.
+End Accessors.
+
+Definition make_hit_prealgebra
+           {Σ : hit_signature}
+           (X : hSet)
+           (f : ⟦ point_constr Σ ⟧ X → X)
+  : hit_prealgebra Σ
+  := X ,, f.
+
+Definition is_hit_algebra
+           {Σ : hit_signature}
+           (X : hit_prealgebra Σ)
+  : UU
+  := ∏ (i : path_index Σ)
+       (p : path_arg Σ i → alg_carrier X),
+     sem_endpoint (algebra_map X) i p (path_lhs Σ i)
+     =
+     sem_endpoint (algebra_map X) i p (path_rhs Σ i).
+
 Definition hit_algebra_disp_cat
            (Σ : hit_signature)
-  : disp_cat
-      (total_category
-         (fun_algebra_disp_cat
-            (container_to_functor (point_constr Σ)))).
-Proof.
-  use disp_full_sub.
-  intros X.
-  induction X as [X c] ; simpl in *.
-  exact (∏ (i : path_index Σ)
-           (p : path_arg Σ i → X),
-         sem_endpoint c i p (path_lhs Σ i)
-         =
-         sem_endpoint c i p (path_rhs Σ i))%type.
-Defined.
+  : disp_cat (hit_prealgebra Σ)
+  := disp_full_sub _ is_hit_algebra.
 
 Definition hit_algebra
            (Σ : hit_signature)

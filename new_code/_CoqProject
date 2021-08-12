@@ -12,6 +12,7 @@ algebra/set_algebra.v
 algebra/setoid_algebra.v
 
 adjunctions/adjunction_constructions.v
+adjunctions/hit_algebra_adjunction.v
 
 examples/natural_numbers.v
 examples/mod2.v

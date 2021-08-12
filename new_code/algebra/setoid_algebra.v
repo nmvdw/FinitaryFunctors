@@ -214,24 +214,53 @@ Proof.
       exact (id _)%setoid.
 Defined.
 
-Definition hit_algebra_setoid_disp_cat
-           (Σ : hit_signature)
-  : disp_cat
-      (total_category
-         (fun_algebra_disp_cat
-            (container_to_setoid_functor (point_constr Σ)))).
-Proof.
-  use disp_full_sub.
-  intros X.
-  induction X as [X c] ; simpl in *.
-  exact (∏ (i : path_index Σ)
-           (p : path_arg Σ i → X),
-         sem_endpoint_setoid c i p (path_lhs Σ i)
-         ≡
-         sem_endpoint_setoid c i p (path_rhs Σ i))%type.
-Defined.
-
-Definition hit_algebra_setoid
+Definition hit_setoid_prealgebra
            (Σ : hit_signature)
   : category
-  := total_category (hit_algebra_setoid_disp_cat Σ).
+  := total_category
+       (fun_algebra_disp_cat
+          (container_to_setoid_functor (point_constr Σ))).
+
+Section Accessors.
+  Context {Σ : hit_signature}
+          (X : hit_setoid_prealgebra Σ).
+
+  Definition alg_carrier_setoid : setoid
+    := pr1 X.
+
+  Definition algebra_map_setoid
+    : setoid_morphism
+        (⦃ point_constr Σ ⦄ alg_carrier_setoid)
+        alg_carrier_setoid
+    := pr2 X.
+End Accessors.
+
+Definition make_hit_setoid_prealgebra
+           {Σ : hit_signature}
+           (X : setoid)
+           (f : setoid_morphism (⦃ point_constr Σ ⦄ X) X)
+  : hit_setoid_prealgebra Σ.
+Proof.
+  refine (X ,, _) ; cbn.
+  exact f.
+Defined.
+
+Definition is_hit_setoid_algebra
+           {Σ : hit_signature}
+           (X : hit_setoid_prealgebra Σ)
+  : UU
+  := ∏ (i : path_index Σ)
+       (p : path_arg Σ i → alg_carrier_setoid X),
+     sem_endpoint_setoid (algebra_map_setoid X) i p (path_lhs Σ i)
+     ≡
+     sem_endpoint_setoid (algebra_map_setoid X) i p (path_rhs Σ i).
+
+Definition hit_setoid_algebra_disp_cat
+           (Σ : hit_signature)
+  : disp_cat (hit_setoid_prealgebra Σ)
+  := disp_full_sub _ is_hit_setoid_algebra.
+
+Definition hit_setoid_algebra
+           (Σ : hit_signature)
+  : category
+  := total_category (hit_setoid_algebra_disp_cat Σ).
