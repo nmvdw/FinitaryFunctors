@@ -14,5 +14,9 @@ algebra/setoid_algebra.v
 adjunctions/adjunction_constructions.v
 adjunctions/hit_algebra_adjunction.v
 
+examples/free.v
 examples/natural_numbers.v
 examples/mod2.v
+examples/monoid.v
+examples/group.v
+examples/join_semi_lattice.v

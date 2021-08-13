@@ -572,3 +572,22 @@ Definition hit_algebra
            (Σ : hit_signature)
   : category
   := total_category (hit_algebra_disp_cat Σ).
+
+Definition hit_algebra_map_eq
+           {Σ : hit_signature}
+           {X Y : hit_algebra Σ}
+           {f g : X --> Y}
+           (p : ∏ x, pr11 f x = pr11 g x)
+  : f = g.
+Proof.
+  use subtypePath.
+  {
+    intro ; apply isapropunit.
+  }
+  use subtypePath.
+  {
+    intro ; apply homset_property.
+  }
+  use funextsec.
+  exact p.
+Qed.
