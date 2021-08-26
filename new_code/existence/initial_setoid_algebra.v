@@ -5,6 +5,7 @@ The equivalence relation is the freely generated congruence relation.
  *)
 Require Import UniMath.Foundations.All.
 Require Import UniMath.MoreFoundations.All.
+Require Import UniMath.Combinatorics.FiniteSets.
 
 Require Import UniMath.CategoryTheory.Core.Categories.
 Require Import UniMath.CategoryTheory.Core.Functors.
@@ -20,14 +21,11 @@ Require Import syntax.W_types.
 Require Import algebra.setoid_algebra.
 Require Import algebra.set_algebra.
 
-
-Definition TODO {A : Type} : A.
-Admitted.
-
 Local Open Scope container_scope.
 
 Section InitialSetoidAlgebra.
-  Variable (Σ : hit_signature).
+  Variable (Σ : hit_signature)
+           (HΣ : is_finitary_hit Σ).
 
   Definition initial_setoid_carrier_set
     : hSet
@@ -162,8 +160,9 @@ Section InitialSetoidAlgebra.
                initial_setoid_carrier_rel (y₁ z) (y₂ z)))
       as X.
     {
-      apply TODO.
-      (* equivalent to AC, here we might need finiteness *)
+      apply axiom_finite_choice.
+      - apply (pr1 HΣ x₁).
+      - apply q.
     }
     revert X.
     use factor_through_squash.

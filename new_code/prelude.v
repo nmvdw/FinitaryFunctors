@@ -1,6 +1,7 @@
 (** Here we define signatures for HITs *)
 Require Import UniMath.Foundations.All.
 Require Import UniMath.MoreFoundations.All.
+Require Import UniMath.Combinatorics.FiniteSets.
 Require Import UniMath.CategoryTheory.Core.Categories.
 Require Import UniMath.CategoryTheory.Core.Functors.
 Require Import UniMath.CategoryTheory.Core.NaturalTransformations.
@@ -143,3 +144,55 @@ Section TotalAdjunction.
     : adjunction (total_category D₁) (total_category D₂)
     := total_adjunction_data ,, total_adjunction_form_adjunction.
 End TotalAdjunction.
+
+Local Open Scope stn.
+
+Definition axiom_finite_choice
+           {X : UU}
+           (HX : isfinite X)
+           (Y : X → UU)
+           (f : ∏ (x : X), ∥ Y x ∥)
+  : ∥ ∏ (x : X), Y x ∥.
+Proof.
+  unfold isfinite in HX.
+  use (squash_to_prop HX) ; clear HX.
+  {
+    apply ishinh.
+  }
+  intros HX.
+  destruct HX as [ n e ] ; unfold nelstruct in e.
+  revert X Y f e.
+  induction n as [ | n IHn ] ; intros X Y f e.
+  - apply hinhpr.
+    exact (λ x, fromempty (weqstn0toempty (invmap e x))).
+  - pose (weqfromcoprodofstn 1 n) as w ; simpl in w.
+    specialize (IHn (⟦ n ⟧)
+                    (λ x, Y (e (w (inr x))))
+                    (λ x, f (e (w (inr x)))) (idweq _)).
+    use (squash_to_prop IHn) ; clear IHn.
+    {
+      apply ishinh.
+    }
+    intros IHn ; simpl in IHn.
+    pose (q := f (e (weqfromcoprodofstn_map 1 n (inl (invmap weqstn1tounit tt))))).
+    use (squash_to_prop q) ; clear q.
+    {
+      apply ishinh.
+    }
+    intro q.
+    apply hinhpr.
+    intros x.
+    refine (transportf Y (homotweqinvweq (e ∘ w)%weq x) _) ; simpl.
+    generalize (invmap (e ∘ w)%weq x).
+    intro z.
+    induction z as [ z | z ].
+    + pose (p := homotinvweqweq weqstn1tounit z).
+      assert (weqstn1tounit z = tt) as p'.
+      {
+        apply isapropunit.
+      }
+      induction p.
+      induction p'.
+      apply q.
+    + apply IHn.
+Qed.
