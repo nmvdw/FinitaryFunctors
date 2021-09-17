@@ -1,10 +1,5 @@
-Require Import UniMath.Foundations.PartD.
-Require Import UniMath.Foundations.Propositions.
-Require Import UniMath.Foundations.Sets.
-Require Import UniMath.Foundations.UnivalenceAxiom.
-Require Import UniMath.Foundations.NaturalNumbers.
-Require Import UniMath.Foundations.HLevels.
-Require Import UniMath.MoreFoundations.PathsOver.
+Require Import UniMath.Foundations.All.
+Require Import UniMath.MoreFoundations.All.
 
 Require Import UniMath.CategoryTheory.Core.Categories.
 Require Import UniMath.CategoryTheory.Core.Functors.
@@ -26,6 +21,27 @@ Require Import algebra.set_algebra.
 
 Local Open Scope cat.
 
+
+(*
+Definition test
+           {A : UU}
+           {B : A → UU}
+           {C : ∏ (x : A), B x → UU}
+           {a₁ a₂ : A}
+           (p : a₁ = a₂)
+           (f : ∏ (y : B a₁), C a₁ y)
+           (z : B a₂)
+  : UU.
+Proof.
+  simple refine (transportf
+                   (λ (x : A), ∏ (y : B x), C x y)
+                   p
+                   f
+                   z                   
+                 =
+                 _).
+ *)
+
 (** ** Category HDSET of families of hSets *)
 Section HDSET_precategory.
 
@@ -46,7 +62,33 @@ Proof.
       use impred_isaset.
       intro x.
       exact (isaset_set_fun_space _ _).
-Defined.      
+Defined.
+
+Definition hdset_fun_eq
+           {A B : hDSet}
+           {f g : hdset_fun_space A B}
+           (p : pr1 f = pr1 g)
+           (q : ∏ (x : hDSet_set A)
+                  (y : hDSet_fam A x),
+                transportf
+                  (hDSet_fam B)
+                  (eqtohomot p x)
+                  (pr2 f x y)
+                =
+                pr2 g x y)
+  : f = g.
+Proof.
+  induction f as [f1 f2].
+  induction g as [g1 g2].
+  cbn in *.
+  use total2_paths_f.
+  - exact p.
+  - use funextsec ; intro x.
+    use funextsec ; intro y.
+    induction p.
+    cbn in q ; cbn.
+    exact (q x y).
+Defined.
 
 Definition hdset_map {A B : hDSet} (f : hdset_fun_space A B) : hDSet_set A → hDSet_set B
   := pr1 f.
@@ -127,21 +169,17 @@ Definition SET_to_DSET_is_functor : is_functor SET_to_DSET_data.
 Proof.
   use tpair.
   - intro X.
-    use total2_paths2_b.
+    use hdset_fun_eq.
     + apply idpath.
-    + apply funextsec.
-      intro x.
-      apply funextsec.
+    + intro x.
       intro y.
       apply iscontrpathsinunit.
   - intros X Y Z f g.
-    use total2_paths2_b.
+    use hdset_fun_eq.
     + apply idpath.
-    + apply funextsec.
-      intro x.
-      apply funextsec.
+    + intro x.
       intro y.
-      apply iscontrpathsinunit.
+      apply idpath.
 Qed.
              
 Definition SET_to_DSET : SET ⟶ DSET.
@@ -245,13 +283,9 @@ Definition form_adj_SET_DSET : form_adjunction' adj_SET_DSET_data.
 Proof.
   split.
   - intro X.
-    simpl.
-    use total2_paths2_b.
+    use hdset_fun_eq.
     + apply idpath.
-    + apply funextsec.
-      intro x.
-      apply funextsec.
-      intro y.
+    + intros x y.
       apply iscontrpathsinunit.
   - intro X.
     apply idpath.
@@ -278,7 +312,8 @@ Section LiftAdjunctionPreAlg.
       + exact (F (tot X)).
       + use make_hSet.
         * exact (#F tot_pr1 z = f).
-        * apply TODO.
+        * apply isasetaprop.
+          apply (F (pr1 X)).
   Defined.
 
   Definition DF_map
@@ -311,13 +346,43 @@ Section LiftAdjunctionPreAlg.
   Proof.
     use tpair.
     - intro X.
-      use total2_paths2_b.
+      use hdset_fun_eq.
       + apply (functor_id F).
-      + apply TODO.
+      + intros x y.
+        use subtypePath.
+        {
+          intro z.
+          apply (F (pr1 X)).
+        }
+        simpl.
+        etrans.
+        {
+          exact (pr1_transportf
+                   (eqtohomot (functor_id F (pr1 X)) x)
+                   _).
+        }
+        simpl.
+        rewrite transportf_const ; cbn.
+        exact (eqtohomot (functor_id F _) (pr1 y)).
     - intros X Y Z f g.
-      use total2_paths2_b.
+      use hdset_fun_eq.
       + apply (functor_comp F).
-      + apply TODO.
+      + intros x y.
+        use subtypePath.
+        {
+          intros z.
+          apply (F (pr1 Z)).
+        }
+        simpl.
+        etrans.
+        {
+          exact (pr1_transportf
+                   (eqtohomot (functor_comp F (pr1 f) (pr1 g)) x)
+                   _).
+        }
+        simpl.
+        rewrite transportf_const ; cbn.
+        exact (eqtohomot (functor_comp F (tot_map X Y f) _) (pr1 y)).
   Qed.      
             
   Definition DF : functor DSET DSET.
@@ -332,12 +397,9 @@ Section LiftAdjunctionPreAlg.
     use make_nat_trans.
     - exact (λ X, idfun _ ,, λ _ _, tt).
     - intros X Y f.
-      use total2_paths2_b.
+      use hdset_fun_eq.
       + apply idpath.
-      + apply funextsec.
-        intro x.
-        apply funextsec.
-        intro y.
+      + intros x y.
         apply iscontrpathsinunit.
   Defined.  
 
@@ -356,8 +418,12 @@ Section LiftAdjunctionPreAlg.
         exact (!(toforallpaths _ _ _ p x) @ toforallpaths _ _ _ q x).
       + cbn.
         refine (PartA.transportf_total2_const _ _ _ _ _ _ _ _ @ _).
-        apply maponpaths.
-        apply TODO.
+        use subtypePath.
+        {
+          intro.
+          apply (F (pr1 Y)).
+        }
+        apply idpath.
   Defined.
         
   Definition fun_alg_disp_adj_SET_DSET
@@ -370,25 +436,33 @@ Section LiftAdjunctionPreAlg.
     - exact nL.
     - exact nR.
     - intro X.
-      use total2_paths2_b.
+      use hdset_fun_eq.
       + apply idpath.
-      + simpl.
-        apply funextsec.
-        intro x.
-        apply funextsec.
-        intro y.
+      + intros x y.
         cbn.
         use total2_paths2_b.
         * exact (!(pr2 y)).
-        * apply TODO.
+        * apply (F (pr1 X)).
     - intro X.
       apply funextsec.
       intro x.
       simpl.
       use total2_paths2_b.
-      + simpl.
-        unfold idfun.
-        apply TODO.
+      + cbn.
+        pose (eqtohomot
+                 (@functor_comp
+                    _ _
+                    F
+                    X
+                    (tot (hset_to_hdset X))
+                    X
+                    (λ z, z ,, tt)
+                    tot_pr1)
+                 x)
+          as p.
+        cbn in p.
+        refine (!_ @ p).
+        exact (eqtohomot (functor_id F _) x).
       + apply iscontrpathsinunit. 
   Defined.
 
@@ -450,11 +524,12 @@ Section LiftAdjunctionAlg.
        ∑ (p : sem_endpoint (hdset_map (algebraD_map X)) i var_set (path_lhs Σ i)
               =
               sem_endpoint (hdset_map (algebraD_map X)) i var_set (path_rhs Σ i)), 
-       @PathOver _ _ _
+       @PathOver
+         _ _ _
+         p
          (hDSet_fam (algD_carrier X))
          (sem_endpointD (algebraD_map X) i var_set var_fam (path_lhs Σ i))
-         (sem_endpointD (algebraD_map X) i var_set var_fam (path_rhs Σ i))
-         p.
+         (sem_endpointD (algebraD_map X) i var_set var_fam (path_rhs Σ i)).
 
   Definition hit_algebraD_disp_cat
              (Σ : hit_signature)
@@ -522,6 +597,7 @@ Section LiftAdjunctionAlg.
         intro x.
         exact (maponpaths pr1 (IHp x)).
       + simpl.
+        cbn.
         apply TODO.
   Qed.
        
@@ -546,12 +622,12 @@ Section LiftAdjunctionAlg.
                           y)
              (hyp_fam : @PathOver
                           _ _ _
+                          hyp_set
                           (hDSet_fam (algD_carrier X))
                           (sem_endpointD (algebraD_map X) i (λ x : path_arg Σ i, tot_pr1 (var x))
                                          (λ x : path_arg Σ i, pr2 (var x)) x)
                           (sem_endpointD (algebraD_map X) i (λ x : path_arg Σ i, tot_pr1 (var x))
-                                         (λ x : path_arg Σ i, pr2 (var x)) y)
-                          hyp_set)             
+                                         (λ x : path_arg Σ i, pr2 (var x)) y))             
     : sem_endpoint
         (algebra_map (right_functor (adj_hit_prealgebra_hit_prealgebraD Σ) X))
         i var x
@@ -563,7 +639,6 @@ Section LiftAdjunctionAlg.
     refine (sem_endpoint_tot Σ X i var x
                              @ _
                              @ !(sem_endpoint_tot Σ X i var y)).
-    Search PathOver.
     use PathOverToTotalPath.
     - exact hyp_set.
     - exact hyp_fam.
