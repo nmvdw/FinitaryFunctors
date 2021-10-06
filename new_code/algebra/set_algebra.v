@@ -10,6 +10,7 @@ Require Import UniMath.CategoryTheory.limits.binproducts.
 Require Import UniMath.CategoryTheory.limits.bincoproducts.
 Require Import UniMath.CategoryTheory.DisplayedCats.Core.
 Require Import UniMath.CategoryTheory.DisplayedCats.Constructions.
+Require Import UniMath.CategoryTheory.covyoneda.
 
 Require Import prelude.
 Require Import syntax.containers.
@@ -516,8 +517,8 @@ Definition sem_endpoint
            {X : hSet}
            {Q : hSet}
            (c : ⟦ P ⟧ X → X)
-           (var : Q → X)
            (x : W P Q)
+           (var : Q → X)
   : X.
 Proof.
   induction x as [ v | s p IHp ].
@@ -525,6 +526,58 @@ Proof.
   - exact (c (s ,, IHp)).
 Defined.
 
+Definition sem_endpoint_is_nat_trans
+           {P : container}
+           {X Y : total_precategory (fun_algebra_disp_cat (container_to_functor P))}
+           (f : X --> Y)
+           {Q : hSet}
+           (x : W P Q)
+           (var : Q → (pr1 X : hSet))
+  : sem_endpoint (pr2 Y) x (λ x0 : Q, pr1 f (var x0))
+    =
+    pr1 f (sem_endpoint (pr2 X) x var).
+Proof.
+  induction x as [ v | s p IHp ].
+  - apply idpath.
+  - cbn.
+    pose (pr2 f) as f_fam.
+    cbn in f_fam.
+    pose (eqtohomot f_fam) as f_fam'.
+    unfold homotsec in f_fam'.
+    refine (_ @ !f_fam' _).
+    apply maponpaths.
+    cbn.
+    unfold interpret_container_map.
+    cbn.
+    apply maponpaths.
+    apply funextsec.
+    exact IHp.
+Qed.
+    
+Definition sem_endpoint_nat_trans
+           {P : container}
+           {Q : hSet}
+           (x : W P Q)
+  : nat_trans
+      (pr1_category (fun_algebra_disp_cat (container_to_functor P))
+       ∙
+       covyoneda _ has_homsets_HSET Q)
+      (pr1_category (fun_algebra_disp_cat (container_to_functor P))).
+Proof.
+  use make_nat_trans.
+  - intro X.
+    simpl in X.
+    simpl.
+    intro var.
+    cbn in var.
+    use (sem_endpoint (pr2 X) x var).
+  - intros X Y f.
+    apply funextsec.
+    exact (sem_endpoint_is_nat_trans f x).
+Defined.
+
+
+    
 (*
 Definition test
            (Q : hSet)

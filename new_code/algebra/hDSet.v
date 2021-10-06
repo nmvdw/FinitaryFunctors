@@ -563,7 +563,16 @@ Section LiftAdjunctionAlg.
       + refine (∏ (v : Q), hDSet_fam X (q v)).
       + apply TODO.
   Defined.
-  
+
+  (* 
+
+     Define dependent version of covyoneda.
+
+     Question: only for the special case when first argument is a hSet
+     (as in funtest) or more general?  
+
+     Goal: sem_endpointD is a natural transformation, similarly to sem_endpoint.
+   *)
   
   Definition sem_endpointD
              {P : container}
