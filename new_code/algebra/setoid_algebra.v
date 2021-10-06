@@ -222,7 +222,7 @@ Definition sem_endpoint_setoid
            (var : path_arg Σ i → X)
            (x : W (point_constr Σ) (path_arg Σ i))
   : X
-  := sem_endpoint (λ z, pr1 c (container_to_setoid z)) i var x.
+  := sem_endpoint (λ z, pr1 c (container_to_setoid z)) var x.
 (*
 Proof.
   refine ().

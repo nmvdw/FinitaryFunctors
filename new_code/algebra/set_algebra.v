@@ -512,6 +512,51 @@ Proof.
 Defined.
 
 Definition sem_endpoint
+           {P : container}
+           {X : hSet}
+           {Q : hSet}
+           (c : ⟦ P ⟧ X → X)
+           (var : Q → X)
+           (x : W P Q)
+  : X.
+Proof.
+  induction x as [ v | s p IHp ].
+  - exact (var v).
+  - exact (c (s ,, IHp)).
+Defined.
+
+(*
+Definition test
+           (Q : hSet)
+  : functor SET SET.
+Proof.
+  use make_functor.
+  - use make_functor_data.
+    + exact (λ X, funset Q X).
+    + cbn ; intros ? ? f.
+      intros g q.
+      exact (f (g q)).
+  - repeat split.
+Defined.      
+
+Definition sem_endpoint_nat_trans
+           {P : container}
+           {X : hSet}
+           {Q : hSet}
+           (c : ⟦ P ⟧ X → X)
+           (x : W P Q)
+  : nat_trans
+      (test Q)
+      (functor_identity _).
+Proof.
+  use make_nat_trans.
+  - intros ? v.
+    cbn in v.
+    exact (sem_endpoint c v x).
+*)
+
+(*
+Definition sem_endpoint
            {Σ : hit_signature}
            {X : hSet}
            (c : ⟦ point_constr Σ ⟧ X → X)
@@ -524,6 +569,7 @@ Proof.
   - exact (var v).
   - exact (c (s ,, IHp)).
 Defined.
+ *)
 
 Close Scope set.
 
@@ -559,9 +605,9 @@ Definition is_hit_algebra
   : UU
   := ∏ (i : path_index Σ)
        (p : path_arg Σ i → alg_carrier X),
-     sem_endpoint (algebra_map X) i p (path_lhs Σ i)
+     sem_endpoint (algebra_map X) p (path_lhs Σ i)
      =
-     sem_endpoint (algebra_map X) i p (path_rhs Σ i).
+     sem_endpoint (algebra_map X) p (path_rhs Σ i).
 
 Definition hit_algebra_disp_cat
            (Σ : hit_signature)
