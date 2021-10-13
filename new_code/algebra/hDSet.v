@@ -11,6 +11,8 @@ Require Import UniMath.CategoryTheory.DisplayedCats.Core.
 Require Import UniMath.CategoryTheory.DisplayedCats.Constructions.
 Require Import UniMath.CategoryTheory.DisplayedCats.Equivalences.
 
+Require Import UniMath.CategoryTheory.covyoneda.
+
 Require Import prelude.
 Require Import adjunction_constructions.
 Require Import syntax.containers.
@@ -69,6 +71,52 @@ Section HDSET_precategory.
       cbn in q ; cbn.
       exact (q x y).
   Defined.
+
+  Definition hdset_fun_to_eq_base
+             {A B : hDSet}
+             {f g : hdset_fun_space A B}
+             (p : f = g)
+    : pr1 f ~ pr1 g.
+  Proof.
+    induction p.
+    intro.
+    apply idpath.
+  Defined.
+
+  Definition hdset_fun_to_eq_fiber
+             {A B : hDSet}
+             {f g : hdset_fun_space A B}
+             (p : f = g)
+             (x : hDSet_set A)
+             (y : hDSet_fam A x)
+    : transportf
+        (hDSet_fam B)
+        (hdset_fun_to_eq_base p x)
+        (pr2 f x y)
+      =
+      pr2 g x y.
+  Proof.
+    induction p.
+    apply idpath.
+  Qed.  
+
+  Definition hdset_fun_to_eq_fiber_alt
+             {A B : hDSet}
+             {f g : hdset_fun_space A B}
+             (p : f = g)
+             (x : hDSet_set A)
+             (y : hDSet_fam A x)
+    : transportf
+        (hDSet_fam B)
+        (!(hdset_fun_to_eq_base p x))
+        (pr2 g x y)
+      =
+      pr2 f x y.
+  Proof.
+    induction p.
+    apply idpath.
+  Qed.  
+
 
   Definition hdset_map {A B : hDSet} (f : hdset_fun_space A B) : hDSet_set A → hDSet_set B
     := pr1 f.
@@ -497,7 +545,8 @@ Section LiftAdjunctionAlg.
     := DF (container_to_functor C).
                                                             
   Definition hit_prealgebraD (Σ : hit_signature) : category
-    := total_category (fun_algebra_disp_cat (container_to_functorD (point_constr Σ))).
+    := total_category
+         (fun_algebra_disp_cat (container_to_functorD (point_constr Σ))).
 
   (*
     Generalize sem_endpointD and sem_endpoint
@@ -573,7 +622,7 @@ Section LiftAdjunctionAlg.
 
      Goal: sem_endpointD is a natural transformation, similarly to sem_endpoint.
    *)
-  
+
   Definition sem_endpointD
              {P : container}
              {X : hDSet}
@@ -582,12 +631,12 @@ Section LiftAdjunctionAlg.
              (x : W P Q) (* the endpoint *)
              (var_set : Q → hDSet_set X) (* above the P *)
              (var_fam : ∏ (v : Q), hDSet_fam X (var_set v))
-    : hDSet_fam X (sem_endpoint (hdset_map c) var_set x).
+    : hDSet_fam X (sem_endpoint (hdset_map c) x var_set).
   Proof.
     induction x as [ v | s p IHp ].
     - exact (var_fam v).
     - refine (hdset_map_fam c _ _).
-      refine ((s ,, λ v, sem_endpoint (hdset_map c) var_set (p v) ,, IHp v) ,, _).
+      refine ((s ,, λ v, sem_endpoint (hdset_map c) (p v) var_set ,, IHp v) ,, _).
       apply idpath.
   Defined.
 
@@ -604,12 +653,182 @@ Section LiftAdjunctionAlg.
         X.
   Proof.
     simple refine (_ ,, _).
-    - intro var_set.
-      exact (sem_endpoint (hdset_map c) var_set x).
-    - cbn.
-      intros var_set var_fam.
-      exact (sem_endpointD c x var_set var_fam).
+    - exact (λ var_set, sem_endpoint (hdset_map c) x var_set).
+    - exact (λ var_set var_fam, sem_endpointD c x var_set var_fam).
   Defined.
+
+  Definition covyonedaD_data
+             (Q : hSet)
+    : functor_data DSET DSET.
+  Proof.
+    use make_functor_data.
+    - intros X.
+      simple refine (_ ,, _).
+      + exact (funset Q (pr1 X)).
+      + cbn.
+        intro f.
+        use make_hSet.
+        * refine (∏ (q : Q), pr2 X (f q)).
+        * apply TODO.
+    - intros X Y f ; cbn.
+      simple refine (_ ,, _).
+      + exact (λ g q, pr1 f (g q)).
+      + exact (λ g gg q, pr2 f _ (gg q)).
+  Defined.
+
+  Definition covyonedaD_is_functor
+             (Q : hSet)
+    : is_functor (covyonedaD_data Q).
+  Proof.
+    split ; intro ; intros ; apply idpath.
+  Qed.
+  
+  Definition covyonedaD
+             (Q : hSet)
+    : DSET ⟶ DSET.
+  Proof.
+    use make_functor.
+    - exact (covyonedaD_data Q).
+    - exact (covyonedaD_is_functor Q).
+  Defined.
+
+  Open Scope container_scope.
+
+  Definition alg_map_sem_endpoint
+             {X Y : hSet}
+             {P : container}
+             {Q : hSet}
+             (cX : ⟦ P ⟧ X → X)
+             (cY : ⟦ P ⟧ Y → Y)
+             (x : W P Q)
+             (f : X → Y)
+             (c_f : ∏ (x : ⟦ P ⟧ X), f(cX x) = cY (interpret_container_map P f x))
+             (var : Q → X)
+    : sem_endpoint cY x (λ q, f(var q))
+      =
+      f (sem_endpoint cX x var).
+  Proof.
+    induction x as [ v | s p IHp ].
+    - apply idpath.
+    - simpl.
+      refine (_ @ !(c_f _)).
+      unfold interpret_container_map, cpair ; cbn.
+      do 2 apply maponpaths.
+      use funextsec.
+      intro z.
+      apply IHp.
+  Qed.
+
+  Definition alg_map_sem_endpoint_fun
+             {X Y : hSet}
+             {P : container}
+             {Q : hSet}
+             (cX : ⟦ P ⟧ X → X)
+             (cY : ⟦ P ⟧ Y → Y)
+             (x : W P Q)
+             (f : X → Y)
+             (c_f : ∏ (x : ⟦ P ⟧ X), f(cX x) = cY (interpret_container_map P f x))
+    : (λ var, sem_endpoint cY x (λ q, f(var q)))
+      =
+      (λ var, f (sem_endpoint cX x var)).
+  Proof.
+    use funextsec.
+    exact (alg_map_sem_endpoint cX cY x f c_f).
+  Defined.
+
+
+  Definition forgetful_container_D
+             (P : container)
+    : total_precategory (fun_algebra_disp_cat (container_to_functorD P)) ⟶ DSET
+    := pr1_category (fun_algebra_disp_cat (container_to_functorD P)).
+    
+  (*
+  Definition transportf_sem_endpoint
+             {Y : DSET}
+             (P : container)
+             (Q : hSet)
+             (c : fun_algebra_disp_cat (container_to_functorD P) Y)
+             (x : W P Q)
+             (var_set : Q → hDSet_set Y)
+             (var_fam : ∏ (v : Q), hDSet_fam Y (var_set v))
+    : UU.
+  Proof.
+    simple refine (transportf
+                     (hDSet_fam Y)
+                     _
+                     (sem_endpointD c x var_set var_fam)
+                   =
+                   sem_endpoint _ x _) ; cbn.
+    Check sem_endpointD.
+    - unfold hDSet_set.
+               transportf (λ x0 : hDSet_set (pr1 Y), hDSet_fam (pr1 Y) x0)
+    (eqtohomot
+       (TODO
+          ((λ x0 : Q → pr11 X, sem_endpoint (hdset_map (pr2 Y)) x (λ q : Q, (pr11 f) (x0 q))) =
+           (λ x0 : Q → pr11 X, hdset_map (pr1 f) (sem_endpoint (hdset_map (pr2 X)) x x0)))) y)
+    (sem_endpointD (pr2 Y) x (λ q : Q, (pr11 f) (y q)) (λ q : Q, (pr21 f) (y q) (z q))) =
+  (pr21 f) (sem_endpoint (hdset_map (pr2 X)) x y) (sem_endpointD (pr2 X) x y z)
+   *)
+  (*
+    - `sem_endpoint_is_nat_trans` should not have the X, Y and f packed. It should separate these, so it becomes easier to reuse it.
+   *)
+  Definition sem_endpointD_is_nat_trans
+             {P : container}
+             {Q : hSet}
+             (x : W P Q) (* the endpoint *)
+    : is_nat_trans
+        (forgetful_container_D P ∙ covyonedaD Q)
+        (forgetful_container_D P)
+        (λ X, sem_endpointD_test (pr2 X) x).
+  Proof.
+    intros X Y f.
+    use hdset_fun_eq.
+    - exact (alg_map_sem_endpoint_fun
+               (pr12 X) (pr12 Y)
+               x
+               (pr11 f)
+               (eqtohomot (maponpaths pr1 (pr2 f)))).
+    - simpl.
+      intros y z.
+      unfold hdset_map_fam.
+
+      induction x as [ v | s p IHp ].
+      + cbn.
+        apply TODO.
+      + unfold hdset_map.
+
+        pose (v₁ := (s ,, (λ z, sem_endpoint (pr12 X) (p z) y))).
+
+        pose (hdset_fun_to_eq_fiber_alt
+                (pr2 f)
+                v₁
+                ((s ,, λ a, (sem_endpoint (pr12 X) (p a) y
+                       ,, sem_endpointD _ (p a) y z))
+                    ,, idpath _))
+          as r.
+        cbn in r.
+        refine (_ @ r) ; clear r.
+        simpl.
+        unfold hdset_map_fam.
+        cbn.
+        use transportf_transpose_right.
+        Search transportf transportb.
+        apply TODO.
+  Qed.
+  
+  Definition sem_endpointD_nat_trans
+             {P : container}
+             {Q : hSet}
+             (x : W P Q) (* the endpoint *)
+    : forgetful_container_D P ∙ covyonedaD Q
+      ⟹
+      forgetful_container_D P.
+  Proof.
+    use make_nat_trans.
+    - exact (λ X, sem_endpointD_test (pr2 X) x).
+    - exact (sem_endpointD_is_nat_trans x).
+  Defined.
+    
 
   Definition algD_carrier
              {Σ : hit_signature}
@@ -624,15 +843,6 @@ Section LiftAdjunctionAlg.
         (container_to_functorD (point_constr Σ) (algD_carrier X))
         (algD_carrier X)
     := pr2 X.
-
-
-  Locate PathOver.
-  Check @PathOver.
-
-  (*
-Definition PathOver {X:Type}
-           {x x':X} (p:x=x')
-           {Y : X -> Type} (y : Y x) (y' : Y x') : Type.*)
   
   Definition is_hit_algebraD
              {Σ : hit_signature}
@@ -641,9 +851,9 @@ Definition PathOver {X:Type}
     := ∏ (i : path_index Σ)
          (var_set : path_arg Σ i → hDSet_set (algD_carrier X))
          (var_fam : ∏ (v : path_arg Σ i), hDSet_fam (algD_carrier X) (var_set v)), 
-       ∑ (p : sem_endpoint (hdset_map (algebraD_map X)) var_set (path_lhs Σ i)
+       ∑ (p : sem_endpoint (hdset_map (algebraD_map X)) (path_lhs Σ i) var_set
               =
-              sem_endpoint (hdset_map (algebraD_map X)) var_set (path_rhs Σ i)), 
+              sem_endpoint (hdset_map (algebraD_map X)) (path_rhs Σ i) var_set), 
        @PathOver
          _ _ _
          p
@@ -688,77 +898,88 @@ Definition PathOver {X:Type}
              (i : path_index Σ)
              (var : path_arg Σ i
                     →
-                    alg_carrier (right_functor (adj_hit_prealgebra_hit_prealgebraD Σ) X))
+                    alg_carrier
+                      (right_functor
+                         (adj_hit_prealgebra_hit_prealgebraD Σ) X))
              (x : W (point_constr Σ) (path_arg Σ i))
     : sem_endpoint
         (algebra_map (right_functor (adj_hit_prealgebra_hit_prealgebraD Σ) X))
-        i var x
+        x var
       =
       (sem_endpoint
          (hdset_map (algebraD_map X))
-         i
-         (λ x : path_arg Σ i, tot_pr1 (var x))
          x
+         (λ x : path_arg Σ i, tot_pr1 (var x))
          ,,
        sem_endpointD
          (algebraD_map X)
-         i
+         x
          (λ x : path_arg Σ i, tot_pr1 (var x))
-         (λ x : path_arg Σ i, pr2 (var x))
-         x).
+         (λ x : path_arg Σ i, pr2 (var x))).
   Proof.
     induction x as [ v | s p IHp ].
     - apply idpath.
     - use total2_paths2_b.
-      + simpl.
+      + (*simpl.
         apply maponpaths.
         use (maponpaths (λ x, s ,, x)).
         apply funextsec.
         intro x.
-        exact (maponpaths pr1 (IHp x)).
+        exact (maponpaths pr1 (IHp x)).*)
+        apply TODO.
       + simpl.
+        cbn.
+        unfold hdset_map_fam, interpret_container_map.
         cbn.
         apply TODO.
   Qed.
-       
+
   Definition disp_adj_hit_algebra_hit_algebraD_lem2
              (Σ : hit_signature)
              (X : hit_prealgebraD Σ)
              (i : path_index Σ)
              (var : path_arg Σ i
                     →
-                    alg_carrier (right_functor (adj_hit_prealgebra_hit_prealgebraD Σ) X))
+                    alg_carrier
+                      (right_functor
+                         (adj_hit_prealgebra_hit_prealgebraD Σ) X))
              (x y : W (point_constr Σ) (path_arg Σ i))
              (hyp_set : sem_endpoint
                           (hdset_map (algebraD_map X))
-                          i
-                          (λ x : path_arg Σ i, tot_pr1 (var x))
                           x
+                          (λ x : path_arg Σ i, tot_pr1 (var x))
                         =
                         sem_endpoint
                           (hdset_map (algebraD_map X))
-                          i
-                          (λ x : path_arg Σ i, tot_pr1 (var x))
-                          y)
+                          y
+                          (λ x : path_arg Σ i, tot_pr1 (var x)))
              (hyp_fam : @PathOver
                           _ _ _
                           hyp_set
                           (hDSet_fam (algD_carrier X))
-                          (sem_endpointD (algebraD_map X) i (λ x : path_arg Σ i, tot_pr1 (var x))
-                                         (λ x : path_arg Σ i, pr2 (var x)) x)
-                          (sem_endpointD (algebraD_map X) i (λ x : path_arg Σ i, tot_pr1 (var x))
-                                         (λ x : path_arg Σ i, pr2 (var x)) y))             
+                          (sem_endpointD
+                             (algebraD_map X)
+                             x
+                             (λ x : path_arg Σ i, tot_pr1 (var x))
+                             (λ x : path_arg Σ i, pr2 (var x)))
+                          (sem_endpointD
+                             (algebraD_map X)
+                             y
+                             (λ x : path_arg Σ i, tot_pr1 (var x))
+                             (λ x : path_arg Σ i, pr2 (var x))))             
     : sem_endpoint
         (algebra_map (right_functor (adj_hit_prealgebra_hit_prealgebraD Σ) X))
-        i var x
+        x
+        var
       =
       sem_endpoint
         (algebra_map (right_functor (adj_hit_prealgebra_hit_prealgebraD Σ) X))
-        i var y.
+        y
+        var.
   Proof.
     refine (sem_endpoint_tot Σ X i var x
-                             @ _
-                             @ !(sem_endpoint_tot Σ X i var y)).
+            @ _
+            @ !(sem_endpoint_tot Σ X i var y)).
     use PathOverToTotalPath.
     - exact hyp_set.
     - exact hyp_fam.
@@ -773,10 +994,18 @@ Definition PathOver {X:Type}
     use disp_full_sub_adjunction.
     - intros X X_is_hitalg i var_set var_fam.
       refine (X_is_hitalg i var_set ,, _).
-      apply TODO.
+      simpl in var_set, var_fam.
+      use PathOverConstant_map1.
+      apply isapropunit.
     - intros X X_is_hitalgD i var.
-      pose (pr1 (X_is_hitalgD i (λ x, tot_pr1 (var x)) (λ x, pr2 (var x)))) as hyp_set.
-      pose (pr2 (X_is_hitalgD i (λ x, tot_pr1 (var x)) (λ x, pr2 (var x)))) as hyp_fam.
+      pose (pr1 (X_is_hitalgD
+                   i
+                   (λ x, tot_pr1 (var x)) (λ x, pr2 (var x))))
+        as hyp_set.
+      pose (pr2 (X_is_hitalgD
+                   i
+                   (λ x, tot_pr1 (var x)) (λ x, pr2 (var x))))
+        as hyp_fam.
       exact (disp_adj_hit_algebra_hit_algebraD_lem2 Σ X i var _ _ hyp_set hyp_fam).
   Defined.
 
@@ -786,115 +1015,46 @@ Definition PathOver {X:Type}
     : adjunction (hit_algebra Σ) (hit_algebraD Σ)
     := total_adjunction (disp_adj_hit_algebra_hit_algebraD Σ).
 
-
-
-
-
-
-  
   (*
-  Definition FSET_to_FDSET_data
-    : disp_functor_data
-        SET_to_DSET
-        (fun_algebra_disp_cat F)
-        (fun_algebra_disp_cat DF).
-  Proof.
-    use tpair.
-    - intros X a.
-      refine (a ,, λ _ _, tt).
-    - intros X Y a b p q.
-      cbn.
-      unfold hdset_comp.
-      simpl.
-      use total2_paths2_b.
-      + exact q.
-      + apply funextsec.
-        intro x.
-        apply funextsec.
-        intro y.
-        apply iscontrpathsinunit.
-  Defined.
-        
-  Definition FSET_to_FDSET_axioms
-    : disp_functor_axioms FSET_to_FDSET_data.
-  Proof.
-    apply TODO.
-  Qed.
 
-  Definition FSET_to_FDSET
-    : disp_functor
-        SET_to_DSET
-        (fun_algebra_disp_cat F)
-        (fun_algebra_disp_cat DF)
-    := (FSET_to_FDSET_data ,, FSET_to_FDSET_axioms).
+    AlgSet -| AlgDSet
 
-  Definition FTOT_data
-    : disp_functor_data
-        TOT
-        (fun_algebra_disp_cat DF)
-        (fun_algebra_disp_cat F).
-  Proof.
-    use tpair.
-    - intros X a z.
-      cbn in *.
-      use tpair.
-      + refine (pr1 a (#F _ z)).
-        exact pr1.
-      + exact (pr2 a _ (z ,, idpath _)).
-    - simpl.
-      intros X Y xx yy f p.
-      apply funextsec.
-      intro z.
-      use total2_paths2_b.
-      + simpl.
-        cbn in p.
-        pose (maponpaths pr1 p) as p'.
-        simpl in p'.
-         (toforallpaths _ _ _ p' _).
-        rewrite p'.
-        unfold tot_map.
-        
-        unfold DF_map in p.
-        cbn in p.
-        unfold hdset_comp in p.
-        simpl in p.
-        unfold hdset_map_fam in p.
-        
-      
-      
-      
-      
+    To prove: if `X` is initial algebra in set, then it satisfies induction principle
 
-  Definition FTOT_axioms
-    : disp_functor_axioms FTOT_data
-  Proof.
-    apply TODO.
-  Qed.
-  
-  Definition FTOT
-    : disp_functor
-        TOT
-        (fun_algebra_disp_cat DF)
-        (fun_algebra_disp_cat F).
+    Observation:
+    Since
+      - X is initial
+      - We have an adjunction
+    `set_to_dset X` is initial
 
-        
-  
-  Definition disp_adj_FSET_FDSET_data
-    : disp_adjunction_data
-        adj_SET_DSET
-        (fun_algebra_disp_cat F)
-        (fun_algebra_disp_cat DF).
-  Proof.
-    use tpair.
-    - simpl.
-      
-  
+    Spse, we have
+      - Y dset over X
+      - the right operation on Y
+      - the right paths on Y
 
-  Definition disp_adj_FSET_FDSET
-    : disp_adjunction
-        adj_SET_DSET
-        (fun_algebra_disp_cat F)
-        (fun_algebra_disp_cat DF).
-  Proof.
+    Then: (Y ,, ...) is in AlgDSet
+    Then: set_to_dset X --> Y in AlgDSet
 
-*)
+    -----
+    We need a category `C`
+    - Interpret containers in `C`
+      (certain limits exist in C)
+    - Some kind of action of Set onto `C`
+
+    ---
+
+    X initial algebra
+    Y fam over X
+
+    ∑ (x : X), Y x
+
+    X --> ∑ (x : X), Y x
+
+    X --> ∑ (x : X), Y x --> X
+      is the identity
+
+    then: obtain the section
+
+   *)
+  Print container.
+  Print interpret_containe.r

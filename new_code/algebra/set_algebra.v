@@ -539,92 +539,34 @@ Definition sem_endpoint_is_nat_trans
 Proof.
   induction x as [ v | s p IHp ].
   - apply idpath.
-  - cbn.
-    pose (pr2 f) as f_fam.
-    cbn in f_fam.
-    pose (eqtohomot f_fam) as f_fam'.
-    unfold homotsec in f_fam'.
-    refine (_ @ !f_fam' _).
+  - refine (_ @ !(eqtohomot (pr2 f) _)) ; cbn.
     apply maponpaths.
-    cbn.
-    unfold interpret_container_map.
-    cbn.
+    unfold interpret_container_map ; cbn.
     apply maponpaths.
     apply funextsec.
     exact IHp.
 Qed.
+
+Definition forgetful_container
+           (P : container)
+  : total_precategory (fun_algebra_disp_cat (container_to_functor P)) ⟶ SET
+  := pr1_category (fun_algebra_disp_cat (container_to_functor P)).
     
 Definition sem_endpoint_nat_trans
            {P : container}
            {Q : hSet}
            (x : W P Q)
-  : nat_trans
-      (pr1_category (fun_algebra_disp_cat (container_to_functor P))
-       ∙
-       covyoneda _ has_homsets_HSET Q)
-      (pr1_category (fun_algebra_disp_cat (container_to_functor P))).
+  : forgetful_container P ∙ covyoneda _ has_homsets_HSET Q
+    ⟹
+    forgetful_container P.
 Proof.
   use make_nat_trans.
-  - intro X.
-    simpl in X.
-    simpl.
-    intro var.
-    cbn in var.
-    use (sem_endpoint (pr2 X) x var).
-  - intros X Y f.
-    apply funextsec.
-    exact (sem_endpoint_is_nat_trans f x).
+  - exact (λ X var, sem_endpoint (pr2 X) x var).
+  - abstract
+      (intros X Y f ;
+       apply funextsec ;
+       exact (sem_endpoint_is_nat_trans f x)).
 Defined.
-
-
-    
-(*
-Definition test
-           (Q : hSet)
-  : functor SET SET.
-Proof.
-  use make_functor.
-  - use make_functor_data.
-    + exact (λ X, funset Q X).
-    + cbn ; intros ? ? f.
-      intros g q.
-      exact (f (g q)).
-  - repeat split.
-Defined.      
-
-Definition sem_endpoint_nat_trans
-           {P : container}
-           {X : hSet}
-           {Q : hSet}
-           (c : ⟦ P ⟧ X → X)
-           (x : W P Q)
-  : nat_trans
-      (test Q)
-      (functor_identity _).
-Proof.
-  use make_nat_trans.
-  - intros ? v.
-    cbn in v.
-    exact (sem_endpoint c v x).
-*)
-
-(*
-Definition sem_endpoint
-           {Σ : hit_signature}
-           {X : hSet}
-           (c : ⟦ point_constr Σ ⟧ X → X)
-           (i : path_index Σ)
-           (var : path_arg Σ i → X)
-           (x : W (point_constr Σ) (path_arg Σ i))
-  : X.
-Proof.
-  induction x as [ v | s p IHp ].
-  - exact (var v).
-  - exact (c (s ,, IHp)).
-Defined.
- *)
-
-Close Scope set.
 
 Definition hit_prealgebra
            (Σ : hit_signature)
@@ -652,15 +594,17 @@ Definition make_hit_prealgebra
   : hit_prealgebra Σ
   := X ,, f.
 
+Close Scope set.
+
 Definition is_hit_algebra
            {Σ : hit_signature}
            (X : hit_prealgebra Σ)
   : UU
   := ∏ (i : path_index Σ)
        (p : path_arg Σ i → alg_carrier X),
-     sem_endpoint (algebra_map X) p (path_lhs Σ i)
+     sem_endpoint (algebra_map X) (path_lhs Σ i) p
      =
-     sem_endpoint (algebra_map X) p (path_rhs Σ i).
+     sem_endpoint (algebra_map X) (path_rhs Σ i) p.
 
 Definition hit_algebra_disp_cat
            (Σ : hit_signature)
